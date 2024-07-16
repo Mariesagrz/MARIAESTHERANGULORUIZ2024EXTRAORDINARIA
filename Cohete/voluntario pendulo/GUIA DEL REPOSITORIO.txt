@@ -1,0 +1,3 @@
+Hay dos codigos
+Un primer codigo pendulo2.c donde se ve la dinámica del pendulo y se calculan los datos para Poincare.
+Un segundo codio lcodigo.c donde se calculan los coeficiente de Lyapunov

@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <math.h>
+
+#define G 9.81  // Aceleración debida a la gravedad
+#define L1 1.0  // Longitud del primer péndulo
+#define L2 1.0  // Longitud del segundo péndulo
+#define M1 1.0  // Masa del primer péndulo
+#define M2 1.0  // Masa del segundo péndulo
+
+#define h 0.01  // Paso de tiempo
+#define STEPS 10000  // Número de pasos de tiempo
+
+void derivadas(double t, double y[], double dydt[]) {
+    double phi = y[0];
+    double phidot = y[1];
+    double psi = y[2];
+    double psidot = y[3];
+
+    double delta = psi - phi;
+    double den1 = (M1 + M2) * L1 - M2 * L1 * cos(delta) * cos(delta);
+    double den2 = (L2 / L1) * den1;
+
+    dydt[0] = phidot;
+    dydt[1] = (M2 * L1 * phidot * phidot * sin(delta) * cos(delta) +
+              M2 * G * sin(psi) * cos(delta) +
+              M2 * L2 * psidot * psidot * sin(delta) -
+              (M1 + M2) * G * sin(phi)) / den1;
+    dydt[2] = psidot;
+    dydt[3] = (-M2 * L2 * psidot * psidot * sin(delta) * cos(delta) +
+              (M1 + M2) * G * sin(phi) * cos(delta) -
+              (M1 + M2) * L1 * phidot * phidot * sin(delta) -
+              (M1 + M2) * G * sin(psi)) / den2;
+}
+
+void rungeKutta(double y[], double t, double h, int n) {
+    int i;
+    double k1[4], k2[4], k3[4], k4[4], yt[4];
+
+    derivadas(t, y, k1);
+    for (i = 0; i < n; i++) yt[i] = y[i] + h * k1[i] / 2;
+    derivadas(t + h / 2, yt, k2);
+    for (i = 0; i < n; i++) yt[i] = y[i] + h * k2[i] / 2;
+    derivadas(t + h / 2, yt, k3);
+    for (i = 0; i < n; i++) yt[i] = y[i] + h * k3[i];
+    derivadas(t + h, yt, k4);
+    for (i = 0; i < n; i++) y[i] += h * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6;
+}
+
+int main() {
+    double t = 0;
+    double y[4];  // Array para almacenar phi, phidot, psi, psidot
+    double energy;
+    FILE *f = fopen("pendulo_doble.txt", "w");
+
+    // Condiciones iniciales
+    y[0] = M_PI / 2;  // Ángulo inicial de phi
+    y[1] = 0;         // Velocidad angular inicial de phi
+    y[2] = M_PI / 2;  // Ángulo inicial de psi
+    y[3] = 0;         // Velocidad angular inicial de psi
+
+    // Iteramos sobre las energías especificadas
+    double energies[] = {1, 3, 5, 10, 15};
+    int num_energies = sizeof(energies) / sizeof(energies[0]);
+
+    for (int e = 0; e < num_energies; e++) {
+        energy = energies[e];
+        printf("Simulando para E = %lf\n", energy);
+
+        // Restablecer condiciones iniciales para cada energía
+        y[0] = M_PI / 2;
+        y[1] = 0;
+        y[2] = M_PI / 2;
+        y[3] = sqrt(2 * energy); // Velocidad inicial ajustada para la energía deseada
+
+        // Simulación
+        for (int i = 0; i < STEPS; i++) {
+            fprintf(f, "%lf\t%lf\t%lf\t%lf\t%lf\n", t, y[0], y[1], y[2], y[3]);
+            rungeKutta(y, t, h, 4);
+            t += h;
+        }
+    }
+
+    fclose(f);
+    return 0;
+}
